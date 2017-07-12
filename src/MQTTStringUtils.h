@@ -15,40 +15,36 @@
 // =============================================================================
 
 /*
- * \file      MQTTConfig.h
+ * \file      MQTTStringUtils.h
  *
  * \brief     <brief description>
  * \details   <detailed description>
  *
- * \author    Othmane AIT EL CADI - dartzon@merylaptop
- * \date      27-03-2017
+ * \author    Othmane AIT EL CADI - dartzon@gmail.com
+ * \date      28-05-2017
  */
 
-#ifndef __MQTTCONFIG_H__
-#define __MQTTCONFIG_H__
+#ifndef __MQTTSTRINGUTILS_H__
+#define __MQTTSTRINGUTILS_H__
 
+// STD includes.
+#include <cstddef>
 #include <cstdint>
 
-#ifndef MQTT_PROTOCOL_VERSION
-#   define MQTT_PROTOCOL_VERSION 0x04 // MQTT version 3.1.1.
-#endif
+namespace Ocelot
+{
+namespace MQTT
+{
 
-constexpr uint16_t UTF8_STR_MAX_LEN = 65535;
+class UTF8String;
 
-// 1 byte : Packet type + specific flags.
-// 4 bytes : Max for remaining length.
-constexpr uint8_t FIX_HEADER_MAX_LEN = 5;
+size_t storeUTF8String(uint8_t* pDestBuffer, const char* pSrcStr, const size_t strLen);
 
-// Maximum variable header length formula:
-// A: Two byte length field.
-// B: Each topic level has max 8 characters.
-// C: We can have up to 4 levels.
-// D: Topic levels are separated by '/' -- (C - 1).
-// Total = A + (B * C) + (C - 1)
-// Total = 2 + (8 * 4) + 3 = 37
-constexpr uint8_t VAR_HEADER_MAX_LEN = 37;
+size_t storeUTF8String(uint8_t* pDestBuffer, const MQTT::UTF8String& srcStr);
 
-// Max packet length.
-constexpr uint8_t PACKET_MAX_LEN = FIX_HEADER_MAX_LEN + VAR_HEADER_MAX_LEN + 86;
+uint32_t getUTF8String(const char* pSrcStr, const size_t strLen, MQTT::UTF8String& destStr);
 
-#endif /* __MQTTCONFIG_H__ */
+} /* namespace MQTT */
+} /* namespace Ocelot */
+
+#endif /* __MQTTSTRINGUTILS_H__ */
