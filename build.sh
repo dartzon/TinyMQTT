@@ -4,7 +4,7 @@
 export CC=clang
 export CXX=clang++
 
-CMAKELIST_DIR=~/Dev-Workspace/CPP/MQTT
+CMAKELIST_DIR=$(pwd)
 
 BUILD_DIR=$CMAKELIST_DIR/build/
 mkdir -p $BUILD_DIR
