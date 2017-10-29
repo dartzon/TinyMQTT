@@ -40,6 +40,13 @@
 using namespace Ocelot;
 using namespace MQTT;
 
+#define CHECK_NET_ERROR(netErr)                                         \
+    if(netErr.value() != 0)                                             \
+    {                                                                   \
+        printf("Error!\n\tCode: %d\n\tMessage:%s\n", netErr.value(), netErr.message().c_str()); \
+        return (netErr.value());                                        \
+    }
+
 int main(void)
 {
     MQTTControlPacket MQTTPkt;
@@ -99,26 +106,65 @@ int main(void)
     // createDisconnectPacket(MQTTPkt);
     // writePacket(MQTTPkt,"packets-saves/MQTT-DisconnectPacket.txt");
 
-    std::string ipAddrStr = "192.168.1.108";
+    // =============================================================
+    // Create client socket.
+    // =============================================================
+    asio::io_service netIOService;
+    asio::ip::tcp netProtocolIP4 = asio::ip::tcp::v4();
+
+    asio::ip::tcp::socket netSocket(netIOService);
+    asio::error_code netErr;
+    netSocket.open(netProtocolIP4, netErr);
+
+    CHECK_NET_ERROR(netErr);
+
+    const std::string ipAddrStr("192.168.1.103");
     const uint16_t portNum = 1883;
+    asio::ip::address srvIPAddr = asio::ip::address::from_string(ipAddrStr, netErr);
+    asio::ip::tcp::endpoint clientEndpt(srvIPAddr, portNum);
 
-    asio::error_code err;
-    asio::ip::address clientIP = asio::ip::address::from_string(ipAddrStr, err);
+    CHECK_NET_ERROR(netErr);
 
-    if(err.value() != 0)
-    {
-        printf("Invalid IP address\n");
-        return (err.value());
-    }
+    netSocket.connect(clientEndpt, netErr);
 
-    asio::ip::tcp::endpoint clientEnd(clientIP, portNum);
+    CHECK_NET_ERROR(netErr);
 
-    // *********************************************************
+    // =============================================================
+    // Send data to the server.
+    // =============================================================
+    const uint8_t* pMQTTPacketBuffer = MQTT::getGlobalMQTTPacketBuffer();
+    asio::const_buffers_1 netOutData = asio::buffer(pMQTTPacketBuffer, MQTTPkt.m_totalPacketSize);
 
-    asio::ip::address serverIP = asio::ip::address_v4::any();
-    asio::ip::tcp::endpoint serverEnd(serverIP, portNum);
+    netSocket.write_some(netOutData, netErr);
 
+    CHECK_NET_ERROR(netErr);
 
+    // =============================================================
+    // Read the server's response.
+    // =============================================================
+    asio::mutable_buffers_1 netInData = asio::buffer(MQTT::getGlobalMQTTPacketBuffer(),
+                                                     MQTTPkt.m_totalPacketSize);
+    const size_t respDataSize = netSocket.read_some(netInData, netErr);
+
+    CHECK_NET_ERROR(netErr);
+    MQTTControlPacketDescriptor pktDesc;
+    MQTT::getPacket(MQTTPkt, &pktDesc);
+
+    assert(respDataSize == pktDesc.m_totalPacketSize);
+    MQTT::debugPrintControlPacket(pktDesc);
+
+    //----------------------------------------------------------------------------------------------
+
+    //     MQTTControlPacketDescriptor pktDesc;
+    //     MQTT::getPacket(MQTTPkt, &pktDesc);
+
+    //     MQTT::debugPrintControlPacket(pktDesc);
+    // }
+    // else
+    // {
+    //     printf("Error!\n\tCode: %d\n\tMessage:%s\n", netErr.value(), netErr.message().c_str());
+    //     return (netErr.value());
+    // }
 
     return (1);
 }
