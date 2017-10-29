@@ -149,6 +149,8 @@ struct MQTTControlPacketDescriptor
 void describeControlPacket(const MQTTControlPacket& ctrlPkt,
                            MQTTControlPacketDescriptor& ctrlDescr);
 
+void debugPrintControlPacket(MQTTControlPacketDescriptor& ctrlDescr);
+
 // -------------------------------------------------------------------------------------------------
 
 uint8_t createFixedHeader(MQTTFixedHeader& MQTTFxHeader, const MQTTControlPacketType ctrlPktType,

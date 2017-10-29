@@ -95,6 +95,46 @@ void MQTT::describeControlPacket(const MQTTControlPacket& ctrlPkt,
 
 // -------------------------------------------------------------------------------------------------
 
+void MQTT::debugPrintControlPacket(MQTTControlPacketDescriptor& ctrlDescr)
+{
+#ifdef OCELOT_DEBUG
+
+    printf("+-------------------------------------------\n");
+    printf("| DEBUG INFO - PACKET INFO : \n");
+
+    printf("|\tPACKET TYPE           : ");
+    switch(ctrlDescr.m_type)
+    {
+    case MQTTControlPacketType::RESERVED_START: printf("RESERVED, SHOULD NOT BE USED !!\n"); break;
+    case MQTTControlPacketType::CONNECT: printf("CONNECT\n"); break;
+    case MQTTControlPacketType::CONNACK:  printf("CONNACK\n"); break;
+    case MQTTControlPacketType::PUBLISH:  printf("PUBLISH\n"); break;
+    case MQTTControlPacketType::PUBACK:  printf("PUBACK\n"); break;
+    case MQTTControlPacketType::PUBREC:  printf("PUBREC\n"); break;
+    case MQTTControlPacketType::PUBREL:  printf("PUBREL\n"); break;
+    case MQTTControlPacketType::PUBCOMP:  printf("PUBCOMP\n"); break;
+    case MQTTControlPacketType::SUBSCRIBE:  printf("SUBSCRIBE\n"); break;
+    case MQTTControlPacketType::SUBACK:  printf("SUBACK\n"); break;
+    case MQTTControlPacketType::UNSUBSCRIBE:  printf("UNSUBSCRIBE\n"); break;
+    case MQTTControlPacketType::UNSUBACK:  printf("UNSUBACK\n"); break;
+    case MQTTControlPacketType::PINGREQ:  printf("PINGREQ\n"); break;
+    case MQTTControlPacketType::PINGRESP:  printf("PINGRESP\n"); break;
+    case MQTTControlPacketType::DISCONNECT:  printf("DISCONNECT\n"); break;
+    case MQTTControlPacketType::RESERVED_END:  printf("RESERVED, SHOULD NOT BE USED !!\n"); break;
+    }
+
+    printf("|\tFIXED HEADER SIZE     : %u bytes\n", ctrlDescr.m_fixedHeaderSize);
+    printf("|\tVARIABLE HEADER SIZE  : %u bytes\n", ctrlDescr.m_variableHeaderSize);
+    printf("|\tPAYLOAD SIZE          : %u bytes\n", ctrlDescr.m_payloadSize);
+    printf("+-------------------------------------------\n");
+    printf("|\tTOTAL PACKET SIZE     : %u bytes\n", ctrlDescr.m_totalPacketSize);
+    printf("+-------------------------------------------\n");
+
+#endif
+}
+
+// -------------------------------------------------------------------------------------------------
+
 uint8_t MQTT::createFixedHeader(MQTTFixedHeader& MQTTFxHeader,
                                 const MQTTControlPacketType ctrlPktType, uint32_t remainingLength,
                                 const uint8_t lowerQuadbit)
@@ -722,6 +762,12 @@ void MQTT::getPacket(MQTTControlPacket& ctrlPkt, MQTTControlPacketDescriptor* pC
     ctrlPkt.m_pPayload = nullptr;
     ctrlPkt.m_totalPacketSize = 0;
 
+    // Clear the packet descriptor's data if not null.
+    if(pCtrlDescr != nullptr)
+    {
+        memset(pCtrlDescr, 0, sizeof(MQTTControlPacketDescriptor));
+    }
+
     // =============================================================
     // Compute fixed header length.
     // =============================================================
@@ -756,8 +802,7 @@ void MQTT::getPacket(MQTTControlPacket& ctrlPkt, MQTTControlPacketDescriptor* pC
     {
     case MQTTControlPacketType::CONNECT:
         ctrlPkt.m_pPayload = ctrlPkt.m_variableHeader.m_pData + 10;
-        ctrlPkt.m_totalPacketSize += 10; // Variable header length.
-        ctrlPkt.m_totalPacketSize += (remainingLength - 10); // Payload length.
+        ctrlPkt.m_totalPacketSize += remainingLength; // Payload length.
 
         if(pCtrlDescr != nullptr)
         {
@@ -773,8 +818,7 @@ void MQTT::getPacket(MQTTControlPacket& ctrlPkt, MQTTControlPacketDescriptor* pC
 
         varHeaderSize += MQTT::toLittleEndian(subjectLen);
         ctrlPkt.m_pPayload = ctrlPkt.m_variableHeader.m_pData + varHeaderSize;
-        ctrlPkt.m_totalPacketSize += varHeaderSize; // Variable header length.
-        ctrlPkt.m_totalPacketSize += (remainingLength - varHeaderSize); // Payload length.
+        ctrlPkt.m_totalPacketSize += remainingLength; // Payload length.
 
         if(pCtrlDescr != nullptr)
         {
@@ -788,8 +832,7 @@ void MQTT::getPacket(MQTTControlPacket& ctrlPkt, MQTTControlPacketDescriptor* pC
     case MQTTControlPacketType::SUBACK:
     case MQTTControlPacketType::UNSUBSCRIBE:
         ctrlPkt.m_pPayload = ctrlPkt.m_variableHeader.m_pData + 2;
-        ctrlPkt.m_totalPacketSize += 2; // Variable header length.
-        ctrlPkt.m_totalPacketSize += (remainingLength - 2); // Payload length.
+        ctrlPkt.m_totalPacketSize += remainingLength; // Payload length.
 
         if(pCtrlDescr != nullptr)
         {
@@ -798,7 +841,15 @@ void MQTT::getPacket(MQTTControlPacket& ctrlPkt, MQTTControlPacketDescriptor* pC
         }
         break;
 
-    default: break;
+    default:
+        // This packet may have no variable header and surely no payload.
+        ctrlPkt.m_totalPacketSize += remainingLength;
+
+        if(pCtrlDescr != nullptr)
+        {
+            pCtrlDescr->m_variableHeaderSize = pCtrlDescr->m_remainingLength;
+            pCtrlDescr->m_payloadSize = 0;
+        }
     }
 
     if(pCtrlDescr != nullptr)
