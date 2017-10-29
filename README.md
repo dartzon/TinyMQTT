@@ -1,6 +1,4 @@
-# TinyMQTT (WIP)
+# TinyMQTT [WIP]
 
-This is a simple MQTT v3.1.1 client optimized to work on an Arduino UNO board.
+A simple and lightweight MQTT v3.1.1 client intended to run on an Arduino UNO or any board with an ATmega328P microcontroller.
 
-As a first step, I have tested the client with the Eclipse Mosquitto server on a Linux computer.
-The next step is to get this client running on an Arduino UNO board.
