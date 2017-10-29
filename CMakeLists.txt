@@ -24,7 +24,7 @@ file(GLOB_RECURSE MQTT_SRC src/*.cpp src/*.h)
 ###############################################################################
 add_executable(mqtt ${MQTT_SRC})
 
-target_compile_options(mqtt PUBLIC -pthread -std=c++14 -DBOOST_ALL_NO_LIB -DASIO_STANDALONE)
+target_compile_options(mqtt PUBLIC -pthread -std=c++14 -DBOOST_ALL_NO_LIB -DASIO_STANDALONE $<$<CONFIG:DEBUG>:-DOCELOT_DEBUG>)
 
 target_include_directories(mqtt PUBLIC src/)
 target_include_directories(mqtt PRIVATE libs/asio/include/ libs/asio/include/asio/)
